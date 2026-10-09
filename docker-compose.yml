@@ -1,0 +1,21 @@
+services:
+  packet-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: packet-analyzer-api
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      - PKTANALYZER_ENVIRONMENT=production
+      - PKTANALYZER_API_HOST=0.0.0.0
+      - PKTANALYZER_API_PORT=8084
+      - PKTANALYZER_MAX_PCAP_SIZE_BYTES=104857600
+      - PKTANALYZER_DNS_ENTROPY_THRESHOLD=3.8
+      - PKTANALYZER_PORT_SCAN_THRESHOLD=15
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
