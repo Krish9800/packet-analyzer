@@ -1,115 +1,176 @@
 # Network Packet Analysis Tool (`packet-analyzer`)
 
-Enterprise-grade, high-performance Network Packet Analysis, Deep Packet Inspection (DPI) engine, and active cyber threat detector built in Python 3.12.
+High-performance Network Packet Analysis, Deep Packet Inspection (DPI) engine, and active cyber threat detector built in Python 3.12.
 
-[![CI Pipeline](https://github.com/portfolio/packet-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/portfolio/packet-analyzer/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI Pipeline](https://github.com/Krish9800/packet-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/Krish9800/packet-analyzer/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python: 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
+[![DPI: Scapy](https://img.shields.io/badge/DPI-Scapy-red.svg)](https://scapy.net/)
+[![CLI: Typer](https://img.shields.io/badge/CLI-Typer-green.svg)](https://typer.tiangolo.com/)
 
 ---
 
-## 🚀 Key Capabilities
+## Overview & Problem Statement
 
-- **Zero-Dependency PCAP Binary Lexer**: Reads Libpcap captures across little-endian / big-endian, microsecond / nanosecond timestamps.
-- **Deep Protocol Dissection (L2 - L7)**:
-  - **L2**: Ethernet II (with 802.1Q VLAN support), ARP.
-  - **L3**: IPv4 (IHL, options, fragments), IPv6, ICMP.
-  - **L4**: TCP (full flag decoding, sequence numbers), UDP.
-  - **L7**: DNS (RFC 1035 compression pointer resolution, A/AAAA/CNAME/TXT), HTTP/1.x, TLS (ClientHello SNI hostname extraction).
-- **TCP Stream Reassembly & Flow Engine**: 5-tuple canonical conversation tracking, out-of-order sequence reordering, bidirectional payload extraction.
-- **Network Threat Detection Engine**:
-  - High-speed SYN sweeps and stealth scans (NULL, FIN, XMAS).
-  - ARP cache poisoning and MAC spoofing.
-  - DNS tunneling and DGA detection via Shannon entropy ($H \ge 3.8$) and large TXT payloads.
-  - Cleartext credential and API secret leakage over HTTP.
-  - Covert ICMP tunneling anomalies.
-- **Forensic Analytics**: Protocol distribution hierarchy, top talkers, bandwidth throughput (B/s, pkt/s).
-- **Interactive CLI & Telemetry REST API**: Rich terminal UI, JSON, and ArcSight CEF export, plus FastAPI service on port 8084.
+Network security monitoring demands more than simple IP and port filtering. Attackers leverage protocol tunneling, encrypted command-and-control (C2) channels, and micro-burst port sweeps that evade superficial inspection tools.
+
+**Packet Analyzer** is an enterprise-inspired packet dissection and network forensics utility. It decodes raw PCAP captures and live network streams, reconstructs bi-directional TCP/UDP conversations, extracts TLS ClientHello metadata and DNS queries, and runs heuristic threat detection algorithms to isolate malicious activity on the wire.
 
 ---
 
-## 🛠️ Installation & Setup
+## Architecture & Data Flow
+
+```mermaid
+flowchart TD
+    Capture[PCAP Capture / Live Wire] --> Engine[Streaming Dissection Engine]
+
+    subgraph Protocol Dissection Layer
+        Engine --> L2[Ethernet / ARP]
+        L2 --> L3[IPv4 / IPv6 / ICMP]
+        L3 --> L4[TCP Stateful Tracking / UDP]
+        L4 --> L7[DNS / HTTP / TLS Metadata]
+    end
+
+    subgraph Threat Detection Layer
+        L4 --> FlowTracker[Flow Reconstruction Engine]
+        L7 --> DPI[Deep Packet Inspection]
+        FlowTracker --> Heuristics[Threat Heuristic Evaluator]
+        DPI --> Heuristics
+        Heuristics --> Alerts[Security Alerts: SYN Flood / Tunneling / Credential Leak]
+    end
+
+    subgraph Output Interfaces
+        FlowTracker --> RichCLI[Typer / Rich Terminal UI]
+        Alerts --> RichCLI
+        Alerts --> REST[FastAPI REST API / JSON Export]
+    end
+```
+
+---
+
+## Verified Features
+
+- **Multi-Layer Protocol Dissection:** Full decoding of Ethernet, ARP, IPv4, IPv6, ICMP, TCP, UDP, DNS, HTTP, and TLS.
+- **Stateful TCP Flow Tracking:** Reconstructs conversations with sequence tracking, flags analysis (SYN/ACK/FIN/RST), duration, and byte volume.
+- **Deep Packet Inspection (DPI):**
+  - **TLS ClientHello Parsing:** Extracts SNI (Server Name Indication), cipher suites, and TLS version.
+  - **DNS Forensics:** Query types (A, AAAA, TXT, MX), Shannon entropy calculation for DNS tunneling detection.
+  - **HTTP Decoders:** Method, Host, URI, User-Agent, and cleartext credential leakage detection.
+- **Heuristic Threat Detection:**
+  - SYN Flood and TCP reset scanning
+  - Horizontal and vertical port sweeps
+  - High-entropy DNS tunneling channels
+  - Cleartext password/token transmissions
+- **Dual Interface:** High-speed CLI powered by Typer and Rich formatting, plus a headless FastAPI inspection service.
+
+---
+
+## Technology Stack
+
+- **Core Engine:** Python 3.12+
+- **Packet Dissection:** Scapy 2.5+
+- **Data Models:** Pydantic v2
+- **CLI & Formatting:** Typer & Rich
+- **REST Service:** FastAPI & Uvicorn
+- **Testing:** Pytest, Ruff, Mypy, Bandit
+
+---
+
+## Requirements & Installation
+
+### Requirements
+- Linux / macOS / WSL2 on Windows
+- Python 3.12+
+- `libpcap` installed on system (for live sniffing)
+
+### Installation
 
 ```bash
-# Clone and setup virtual environment
-git clone https://github.com/portfolio/packet-analyzer.git
+# Clone the repository
+git clone https://github.com/Krish9800/packet-analyzer.git
 cd packet-analyzer
+
+# Create and activate virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install in development mode
-pip install -e ".[dev]"
+# Install package and dependencies
+pip install -e .
 ```
 
 ---
 
-## 💻 CLI Usage
+## Verified Usage Examples
 
-### 1. Analyze a Capture File
+### 1. Command-Line Interface (CLI)
+
 ```bash
-# Interactive Rich terminal dashboard
-pktanalyzer analyze capture.pcap
+# Analyze a PCAP capture file with full threat detection
+pktanalyzer analyze captures/traffic_sample.pcap --detect-threats
 
-# JSON format for automated pipelines
-pktanalyzer analyze capture.pcap --format json --output report.json
+# Analyze with custom BPF filter and output JSON
+pktanalyzer analyze captures/traffic_sample.pcap --filter "tcp port 443" --format json
 
-# ArcSight Common Event Format (CEF) for SIEM ingestion
-pktanalyzer analyze capture.pcap --format cef --output alerts.cef
+# Reconstruct and list all stateful network flows
+pktanalyzer flows captures/traffic_sample.pcap --min-packets 5 --sort-by bytes
+
+# Check version and loaded dissectors
+pktanalyzer version
 ```
 
-### 2. Inspect Reconstructed Conversations
-```bash
-# List all tracked 5-tuple conversations
-pktanalyzer flows capture.pcap
+### 2. REST API Service
 
-# Inspect bidirectional reconstructed stream
-pktanalyzer flows capture.pcap --id <session_id>
+```bash
+# Launch the API service
+uvicorn pktanalyzer.api.app:app --host 127.0.0.1 --port 8000
+```
+
+Available Endpoints:
+- `GET /health` — Service health check
+- `POST /api/v1/analyze/upload` — Upload a PCAP file for asynchronous dissection
+- `GET /api/v1/flows` — List reconstructed TCP/UDP network flows
+- `GET /api/v1/flows/{session_id}` — Inspect detailed packet breakdown for a specific conversation
+- `GET /api/v1/alerts` — Retrieve all identified security threats and anomalous indicators
+
+---
+
+## Testing & Quality Gates
+
+```bash
+# Run all unit, integration, and security tests
+pytest --cov=pktanalyzer --cov-report=term-missing
+
+# Run protocol dissection tests specifically
+pytest tests/unit/test_dissectors.py
+
+# Lint and formatting validation
+ruff check .
+ruff format --check .
+
+# Static type checking
+mypy src/pktanalyzer
 ```
 
 ---
 
-## 🌐 REST Control Plane API
+## Security Model & Safe Scope
 
-Start the API service:
-```bash
-uvicorn pktanalyzer.api.app:app --host 0.0.0.0 --port 8084
-```
-
-| Method | Endpoint | Description |
-| ------ | -------- | ----------- |
-| `GET` | `/health` | Health check and version status |
-| `POST` | `/api/v1/analyze/upload` | Upload `.pcap` capture for analysis and threat detection |
-| `GET` | `/api/v1/flows` | List reconstructed conversational flows |
-| `GET` | `/api/v1/flows/{id}` | Inspect reconstructed byte stream payload |
-| `GET` | `/api/v1/alerts` | Retrieve all detected security threats |
+- **Passive Inspection:** Operates strictly as a passive network sniffer or offline capture reader. Does not inject packets, modify traffic, or perform active network jamming.
+- **Privilege Separation:** PCAP analysis on stored `.pcap` files runs with standard non-root privileges. Live sniffing requires `CAP_NET_RAW` or `sudo`.
+- **Memory Safety:** Incorporates packet count limits and streaming generators to prevent OOM errors on large capture files.
 
 ---
 
-## 🐳 Docker Deployment
+## Limitations & Known Issues
 
-```bash
-docker-compose up --build -d
-```
-
----
-
-## 🧪 Testing & Verification
-
-```bash
-# Run full test suite with coverage
-pytest --cov=src --cov-report=term-missing --cov-fail-under=90
-
-# Static checks & security scanning
-ruff check src tests
-ruff format --check src tests
-mypy src tests
-bandit -r src
-```
+- **Live Capture Privileges:** Live wire sniffing requires root permissions (`sudo`) on Linux systems to access raw network sockets.
+- **Encrypted Payloads:** Deep payload inspection is restricted to unencrypted protocols (HTTP, DNS) and TLS handshake metadata (SNI). Encrypted application traffic is analyzed via flow heuristics rather than decryption.
 
 ---
 
-## 📚 Documentation
+## License & Responsible Use
 
-- [Architecture Blueprint](docs/architecture.md)
-- [STRIDE Threat Model](docs/threat_model.md)
-- [Changelog](CHANGELOG.md)
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+> [!NOTE]
+> **Defensive Scope:** Packet analysis must be conducted only on networks and packet captures you own or have explicit administrative authorization to monitor.
