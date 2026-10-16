@@ -9,6 +9,7 @@ from pktanalyzer.core.flow import (
     HalfStream,
 )
 from pktanalyzer.core.reader import PCAPGlobalHeader, PCAPReader, PCAPWriter
+from pktanalyzer.core.sanitizer import PCAPSanitizer, SanitizationReport
 
 __all__ = [
     "FlowEndpoint",
@@ -21,5 +22,7 @@ __all__ = [
     "PCAPFormatError",
     "PCAPGlobalHeader",
     "PCAPReader",
+    "PCAPSanitizer",
     "PCAPWriter",
+    "SanitizationReport",
 ]

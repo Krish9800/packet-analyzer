@@ -144,6 +144,42 @@ def flows(
 
 
 @app.command()
+def sanitize(
+    input_pcap: Annotated[Path, typer.Argument(help="Path to input PCAP capture file")],
+    output_pcap: Annotated[Path, typer.Argument(help="Target path for sanitized PCAP file")],
+    anonymize_ips: Annotated[
+        bool, typer.Option("--ips/--no-ips", help="Anonymize IPv4/IPv6 addresses")
+    ] = True,
+    anonymize_macs: Annotated[
+        bool, typer.Option("--macs/--no-macs", help="Anonymize Ethernet MAC addresses")
+    ] = True,
+    scrub_payload: Annotated[
+        bool, typer.Option("--scrub-payload/--keep-payload", help="Zero-out L4 payload bytes")
+    ] = False,
+) -> None:
+    """Sanitize and anonymize a PCAP file to prevent privacy and credential leakage."""
+    if not input_pcap.exists():
+        console.print(f"[bold red]Error:[/bold red] File not found: {input_pcap}")
+        raise typer.Exit(code=1)
+
+    from pktanalyzer.core.sanitizer import PCAPSanitizer
+
+    sanitizer = PCAPSanitizer(
+        anonymize_ips=anonymize_ips,
+        anonymize_macs=anonymize_macs,
+        scrub_payload=scrub_payload,
+    )
+    report = sanitizer.sanitize_file(input_pcap, output_pcap)
+    console.print(
+        f"[bold green]Successfully sanitized {report.total_packets} packets -> {output_pcap}[/bold green]"
+    )
+    console.print(f"  Anonymized IPs: {report.anonymized_ips_count}")
+    console.print(f"  Anonymized MACs: {report.anonymized_macs_count}")
+    if scrub_payload:
+        console.print(f"  Scrubbed Payload Bytes: {report.payload_bytes_scrubbed}")
+
+
+@app.command()
 def version() -> None:
     """Show the Packet Analyzer version."""
     console.print(f"Packet Analyzer v{__version__}")

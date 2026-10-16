@@ -115,8 +115,13 @@ class PCAPReader:
             is_nanosecond=is_nano,
         )
 
-    def read_packets(self) -> Iterator[RawPacket]:
-        """Stream packets from capture as RawPacket models."""
+    def read_packets(self, ignore_errors: bool = False) -> Iterator[RawPacket]:
+        """Stream packets from capture as RawPacket models.
+
+        Args:
+            ignore_errors: When True, cleanly stops iteration on truncated or corrupt
+                           frames instead of raising PCAPCorruptError.
+        """
         endian = "<" if self.header.is_little_endian else ">"
         rec_hdr_fmt = f"{endian}IIII"
         rec_hdr_size = struct.calcsize(rec_hdr_fmt)
@@ -128,6 +133,8 @@ class PCAPReader:
             if not rec_hdr:
                 break
             if len(rec_hdr) < rec_hdr_size:
+                if ignore_errors:
+                    break
                 raise PCAPCorruptError(
                     f"Truncated packet header at frame {frame_num + 1}: "
                     f"expected {rec_hdr_size} bytes, got {len(rec_hdr)}"
@@ -136,6 +143,8 @@ class PCAPReader:
             ts_sec, ts_sub, caplen, orig_len = struct.unpack(rec_hdr_fmt, rec_hdr)
             pkt_data = self._stream.read(caplen)
             if len(pkt_data) < caplen:
+                if ignore_errors:
+                    break
                 raise PCAPCorruptError(
                     f"Truncated packet data at frame {frame_num + 1}: "
                     f"expected {caplen} bytes, got {len(pkt_data)}"
